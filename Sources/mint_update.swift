@@ -31,11 +31,20 @@ extension mint_update {
 }
 
 extension Mint {
-    typealias MintfileReplacement = (from: String, to: String)
+    struct Package {
+        let repo: String
+        let version: String
+
+        var line: String {
+            "\(repo)@\(version)"
+        }
+    }
+    typealias MintfileReplacement = (from: Package, to: Package)
 
     func update() throws {
         guard mintFilePath.exists,
               let mintfile = try? Mintfile(path: mintFilePath) else {
+            print("🌱 mintfile not exists")
             return
         }
         let packages = packages(for: mintfile)
@@ -45,9 +54,10 @@ extension Mint {
 
         var string: String = try mintFilePath.read()
         for replacement in replacements {
+            print("🌱 bump \(replacement.from.repo) from \(replacement.from.version) to \(replacement.to.version)")
             string = string.replacingOccurrences(
-                of: replacement.from,
-                with: replacement.to
+                of: replacement.from.line,
+                with: replacement.to.line
             )
         }
 
@@ -66,8 +76,8 @@ extension Mint {
               package.version != latest else {
             return nil
         }
-        let from = "\(package.repo)@\(package.version)"
-        let to = "\(package.repo)@\(latest)"
+        let from = Package(repo: package.repo, version: package.version)
+        let to = Package(repo: package.repo, version: latest)
         return (from, to)
     }
 }
