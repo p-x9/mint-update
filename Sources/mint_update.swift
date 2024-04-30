@@ -7,16 +7,16 @@ import SwiftCLI
 @main
 struct mint_update: ParsableCommand {
     static let configuration: CommandConfiguration = .init(
-        commandName: "MintUpdate",
+        commandName: "mint-update",
         abstract: "Updates version of the package defined in the `Mintfile`",
         shouldDisplay: true,
         helpNames: [.long, .short]
     )
 
-    @ArgumentParser.Argument(
+    @ArgumentParser.Option(
         help: "Package Name"
     )
-    var name: String = ""
+    var name: String?
 
     @ArgumentParser.Flag(
         name: .customLong("all"),
@@ -39,13 +39,13 @@ struct mint_update: ParsableCommand {
 
         if shouldUpdateAll {
             try mint.updateAll()
-        } else if name.isEmpty {
+        } else if let name {
+            try mint.update(name)
+        } else {
             print(
                 Self.helpMessage()
             )
             throw "Please specify package name"
-        } else {
-            try mint.update(name)
         }
     }
 }
