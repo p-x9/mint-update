@@ -6,9 +6,47 @@ import SwiftCLI
 
 @main
 struct mint_update: ParsableCommand {
+    static let configuration: CommandConfiguration = .init(
+        commandName: "MintUpdate",
+        abstract: "Updates version of the package defined in the `Mintfile`",
+        shouldDisplay: true,
+        helpNames: [.long, .short]
+    )
+
+    @ArgumentParser.Argument(
+        help: "Package Name"
+    )
+    var name: String = ""
+
+    @ArgumentParser.Flag(
+        name: .customLong("all"),
+        help: "Update All Packages"
+    )
+    var shouldUpdateAll: Bool = false
+
+    @ArgumentParser.Option(
+        name: [.customShort("m"), .customLong("mintfile")],
+        help: "Custom path to a Mintfile."
+    )
+    var mintFile: String = "Mintfile"
+
     mutating func run() throws {
-        let mint = Mint(path: mintPath, linkPath: linkPath)
-        try mint.update()
+        let mint = Mint(
+            path: mintPath,
+            linkPath: linkPath,
+            mintFilePath: .init(mintFile)
+        )
+
+        if shouldUpdateAll {
+            try mint.updateAll()
+        } else if name.isEmpty {
+            print(
+                Self.helpMessage()
+            )
+            throw "Please specify package name"
+        } else {
+            try mint.update(name)
+        }
     }
 }
 
@@ -41,30 +79,41 @@ extension Mint {
     }
     typealias MintfileReplacement = (from: Package, to: Package)
 
-    func update() throws {
+    func updateAll() throws {
         guard mintFilePath.exists,
               let mintfile = try? Mintfile(path: mintFilePath) else {
-            print("🌱 mintfile not exists")
-            return
+            throw "🌱 mintfile not exists"
         }
         let packages = packages(for: mintfile)
         let replacements = packages.compactMap {
-            update(for: $0, in: mintfile)
+            replacement(for: $0, in: mintfile)
         }
 
-        var string: String = try mintFilePath.read()
-        for replacement in replacements {
-            print("🌱 bump \(replacement.from.repo) from \(replacement.from.version) to \(replacement.to.version)")
-            string = string.replacingOccurrences(
-                of: replacement.from.line,
-                with: replacement.to.line
-            )
-        }
-
-        try mintFilePath.write(string, encoding: .utf8)
+        try updateMintfile(replacements)
     }
 
-    func update(
+    func update(_ name: String) throws {
+        guard mintFilePath.exists,
+              let mintfile = try? Mintfile(path: mintFilePath) else {
+            throw "🌱 mintfile not exists"
+        }
+        let packages = packages(for: mintfile)
+            .filter {
+                $0.name.contains(name)
+            }
+
+        if packages.isEmpty {
+            throw "🌱 package named `\(name)` was not found"
+        }
+
+        let replacements = packages.compactMap {
+            replacement(for: $0, in: mintfile)
+        }
+
+        try updateMintfile(replacements)
+    }
+
+    private func replacement(
         for package: PackageReference,
         in mintfile: Mintfile
     ) -> MintfileReplacement? {
@@ -79,6 +128,19 @@ extension Mint {
         let from = Package(repo: package.repo, version: package.version)
         let to = Package(repo: package.repo, version: latest)
         return (from, to)
+    }
+
+    private func updateMintfile(_ replacements: [MintfileReplacement]) throws {
+        var string: String = try mintFilePath.read()
+        for replacement in replacements {
+            print("🌱 bump \(replacement.from.repo) from \(replacement.from.version) to \(replacement.to.version)")
+            string = string.replacingOccurrences(
+                of: replacement.from.line,
+                with: replacement.to.line
+            )
+        }
+
+        try mintFilePath.write(string, encoding: .utf8)
     }
 }
 
@@ -113,5 +175,11 @@ extension Mint {
         tags.sort { $0.compare($1, options: .numeric) == .orderedAscending }
 
         return tags.last
+    }
+}
+
+extension String: LocalizedError {
+    public var errorDescription: String? {
+        self
     }
 }
