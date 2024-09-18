@@ -36,7 +36,7 @@ class MintUpdateTests: XCTestCase {
         }
 
         for v in notPrereleaseVersions {
-            XCTAssertFalse(v.isPrerelease)
+            XCTAssertFalse(v.isPrerelease, "\(v)")
         }
     }
 }

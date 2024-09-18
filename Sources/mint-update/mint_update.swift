@@ -32,7 +32,7 @@ struct mint_update: ParsableCommand {
 
     @ArgumentParser.Flag(
         name: .customLong("use-prerelease"),
-        help: "Use the Prerelease version. (alpha, beta, ...)"
+        help: "Use the prerelease version. (alpha, beta, ...)"
     )
     var usePrerelease: Bool = false
 
