@@ -30,6 +30,12 @@ struct mint_update: ParsableCommand {
     )
     var mintFile: String = "Mintfile"
 
+    @ArgumentParser.Flag(
+        name: .customLong("prerelease"),
+        help: "Use the Prerelease version. (alpha, beta, ...)"
+    )
+    var usePrerelease: Bool = false
+
     mutating func run() throws {
         let mint = Mint(
             path: mintPath,
@@ -38,9 +44,9 @@ struct mint_update: ParsableCommand {
         )
 
         if shouldUpdateAll {
-            try mint.updateAll()
+            try mint.updateAll(usePrerelease: usePrerelease)
         } else if let name {
-            try mint.update(name)
+            try mint.update(name, usePrerelease: usePrerelease)
         } else {
             print(
                 Self.helpMessage()
@@ -79,20 +85,20 @@ extension Mint {
     }
     typealias MintfileReplacement = (from: Package, to: Package)
 
-    func updateAll() throws {
+    func updateAll(usePrerelease: Bool) throws {
         guard mintFilePath.exists,
               let mintfile = try? Mintfile(path: mintFilePath) else {
             throw "🌱 mintfile not exists"
         }
         let packages = packages(for: mintfile)
         let replacements = packages.compactMap {
-            replacement(for: $0, in: mintfile)
+            replacement(for: $0, in: mintfile, usePrerelease: usePrerelease)
         }
 
         try updateMintfile(replacements)
     }
 
-    func update(_ name: String) throws {
+    func update(_ name: String, usePrerelease: Bool) throws {
         guard mintFilePath.exists,
               let mintfile = try? Mintfile(path: mintFilePath) else {
             throw "🌱 mintfile not exists"
@@ -107,7 +113,7 @@ extension Mint {
         }
 
         let replacements = packages.compactMap {
-            replacement(for: $0, in: mintfile)
+            replacement(for: $0, in: mintfile, usePrerelease: usePrerelease)
         }
 
         try updateMintfile(replacements)
@@ -115,13 +121,14 @@ extension Mint {
 
     private func replacement(
         for package: PackageReference,
-        in mintfile: Mintfile
+        in mintfile: Mintfile,
+        usePrerelease: Bool
     ) -> MintfileReplacement? {
         guard !["master", "develop", "main"].contains(package.version),
               !package.version.isEmpty else {
             return nil
         }
-        guard let latest = try? findLatestVersion(for: package),
+        guard let latest = try? findLatestVersion(for: package, usePrerelease: usePrerelease),
               package.version != latest else {
             return nil
         }
@@ -156,7 +163,8 @@ extension Mint {
 
 extension Mint {
     func findLatestVersion(
-        for package: PackageReference
+        for package: PackageReference,
+        usePrerelease: Bool
     ) throws -> String? {
         let tagOutput = try Task.capture(
             bash: "git ls-remote --tags --refs \(package.gitPath)"
@@ -172,9 +180,27 @@ extension Mint {
                     .last!
                 )
             }
+
+        if !usePrerelease {
+            tags = tags.filter { !$0.isPrerelease }
+        }
+
         tags.sort { $0.compare($1, options: .numeric) == .orderedAscending }
 
         return tags.last
+    }
+}
+
+extension String {
+    static let prereleasePattern = #"^\d+\.\d+\.\d*[.-][A-Za-z0-9.-]+$"#
+    static var prereleaseRegex: NSRegularExpression {
+        try! .init(pattern: prereleasePattern)
+    }
+
+    var isPrerelease: Bool {
+        let range = NSRange(startIndex ..< endIndex, in: self)
+        return Self.prereleaseRegex
+            .firstMatch(in: self, options: [], range: range) != nil
     }
 }
 
