@@ -31,7 +31,7 @@ struct mint_update: ParsableCommand {
     var mintFile: String = "Mintfile"
 
     @ArgumentParser.Flag(
-        name: .customLong("prerelease"),
+        name: .customLong("use-prerelease"),
         help: "Use the Prerelease version. (alpha, beta, ...)"
     )
     var usePrerelease: Bool = false
