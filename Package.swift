@@ -16,8 +16,21 @@ let package = Package(
             name: "mint-update",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "MintKit", package: "Mint"),
+                "MintUpdateUtil"
+            ]
+        ),
+        .target(
+            name: "MintUpdateUtil",
+            dependencies: [
                 .product(name: "MintKit", package: "Mint")
             ]
         ),
+        .testTarget(
+            name: "MintUpdateTests",
+            dependencies: [
+                "MintUpdateUtil"
+            ]
+        )
     ]
 )
