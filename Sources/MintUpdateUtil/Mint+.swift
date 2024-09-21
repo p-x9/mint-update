@@ -110,7 +110,7 @@ extension Mint {
             bash: "git ls-remote --tags --refs \(package.gitPath)"
         )
         let tagReferences = tagOutput.stdout
-        var tags = tagReferences
+        let tags = tagReferences
             .split(separator: "\n")
             .map {
                 String(
@@ -121,12 +121,24 @@ extension Mint {
                 )
             }
 
+        var tagsMap: [String: String] = .init(
+            uniqueKeysWithValues: tags.compactMap {
+                if let normalized = $0.normalizedVersion {
+                    return ($0, normalized)
+                }
+                return nil
+            }
+        )
+
         if !usePrerelease {
-            tags = tags.filter { !$0.isPrerelease }
+            tagsMap = tagsMap.filter { !$1.isPrerelease }
         }
 
-        tags.sort { $0.compare($1, options: .numeric) == .orderedAscending }
-
-        return tags.last
+        return tagsMap
+            .sorted {
+                $0.value.compare($1.value, options: .numeric) == .orderedAscending
+            }
+            .last?
+            .value
     }
 }
