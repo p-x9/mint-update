@@ -44,6 +44,25 @@ extension String {
     }
 }
 
+extension String {
+    static let releasedVersionPattern = #"^\d+\.\d+\.\d"#
+    static var releasedVersionRegex: NSRegularExpression {
+        try! .init(pattern: releasedVersionPattern)
+    }
+
+    package var releasedVersion: String? {
+        let range = NSRange(startIndex ..< endIndex, in: self)
+        guard let result = Self.releasedVersionRegex
+            .firstMatch(in: self, options: [], range: range) else {
+            return nil
+        }
+        if let matchedRange = Range(result.range, in: self) {
+            return String(self[matchedRange])
+        }
+        return nil
+    }
+}
+
 extension String: LocalizedError {
     public var errorDescription: String? {
         self

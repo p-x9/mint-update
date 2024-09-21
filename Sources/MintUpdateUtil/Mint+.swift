@@ -102,10 +102,9 @@ extension Mint {
 
 // MARK: - Find Version
 extension Mint {
-    func findLatestVersion(
-        for package: PackageReference,
-        usePrerelease: Bool
-    ) throws -> String? {
+    func tags(
+        for package: PackageReference
+    ) throws -> [String] {
         let tagOutput = try Task.capture(
             bash: "git ls-remote --tags --refs \(package.gitPath)"
         )
@@ -121,7 +120,34 @@ extension Mint {
                 )
             }
 
-        var tagsMap: [String: String] = .init(
+        return tags
+    }
+
+    func tagVersionsMap(
+        for package: PackageReference
+    ) throws -> [String: String] {
+        let tags = try tags(for: package)
+        return _tagVersionsMap(of: tags)
+    }
+
+    func findLatestVersion(
+        for package: PackageReference,
+        usePrerelease: Bool
+    ) throws -> String? {
+        let tagsMap = try tagVersionsMap(for: package)
+
+        return _findLatestVersion(
+            from: tagsMap,
+            usePrerelease: usePrerelease
+        )
+    }
+}
+
+extension Mint {
+    func _tagVersionsMap(
+        of tags: [String]
+    ) -> [String: String] {
+        let tagsMap: [String: String] = .init(
             uniqueKeysWithValues: tags.compactMap {
                 if let normalized = $0.normalizedVersion {
                     return ($0, normalized)
@@ -130,15 +156,37 @@ extension Mint {
             }
         )
 
-        if !usePrerelease {
-            tagsMap = tagsMap.filter { !$1.isPrerelease }
-        }
-
         return tagsMap
+    }
+
+    func _findLatestVersion(
+        from tagVersionsMap: [String: String],
+        usePrerelease: Bool
+    ) -> String? {
+        var tagVersionsMap = tagVersionsMap
+        if !usePrerelease {
+            tagVersionsMap = tagVersionsMap.filter { !$1.isPrerelease }
+        }
+        let sorted = tagVersionsMap
             .sorted {
                 $0.value.compare($1.value, options: .numeric) == .orderedAscending
             }
-            .last?
-            .value
+
+        guard let result = sorted.last?.value else {
+            return nil
+        }
+
+        // If it contains values like `2.0.0-rc` and `2.0.0`,
+        // then `2.0.0` shall be preferred
+        if result.isPrerelease {
+            let releasedVersion = result.releasedVersion
+            if let released = tagVersionsMap.first(
+                where: { $0.value == releasedVersion }
+            ) {
+                return released.key
+            }
+        }
+
+        return result
     }
 }
