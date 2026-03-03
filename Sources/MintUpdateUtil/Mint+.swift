@@ -3,7 +3,7 @@
 //
 //
 //  Created by p-x9 on 2024/09/18
-//  
+//
 //
 
 import MintKit
@@ -72,8 +72,9 @@ extension Mint {
         in mintfile: Mintfile,
         usePrerelease: Bool
     ) -> MintfileReplacement? {
-        guard !["master", "develop", "main"].contains(package.version),
-              !package.version.isEmpty else {
+        // Skip branch names, empty versions, and commit hashes
+        guard !package.version.isEmpty,
+              package.shouldUpdateByVersion else {
             return nil
         }
         guard let latest = try? findLatestVersion(for: package, usePrerelease: usePrerelease),
@@ -114,9 +115,9 @@ extension Mint {
             .map {
                 String(
                     $0.split(separator: "\t")
-                    .last!
-                    .split(separator: "/")
-                    .last!
+                        .last!
+                        .split(separator: "/")
+                        .last!
                 )
             }
 
@@ -188,5 +189,26 @@ extension Mint {
         }
 
         return result
+    }
+}
+
+extension PackageReference {
+    public var isBranchName: Bool {
+        ["master", "develop", "main"].contains(version)
+    }
+
+    public var isCommitHash: Bool {
+        version.range(of: "^[0-9a-fA-F]{7,40}$", options: .regularExpression) != nil
+    }
+
+    public var isVersion: Bool {
+        // Accept `MAJOR.MINOR`, `MAJOR.MINOR.PATCH`, and wildcard minor constraints like `MAJOR.MINOR.*`.
+        // (We still exclude branch names and commit hashes elsewhere.)
+        let pattern = #"^(?:v)?\d+\.\d+(?:\.\d+)?(?:\.(?:\*|x|X))?(?:[A-Za-z0-9.+-]*)$"#
+        return version.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    public var shouldUpdateByVersion: Bool {
+        !version.isEmpty && !isBranchName && !isCommitHash && isVersion
     }
 }
