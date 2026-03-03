@@ -86,13 +86,13 @@ class MintUpdateTests: XCTestCase {
         )
 
         package.version = "665ee2a82effcf996ec8f739999c08dd73a4ab81"
-        XCTAssertFalse(package.isSemanticVersion)
+        XCTAssertFalse(package.isVersion)
         XCTAssertTrue(package.isCommitHash)
         XCTAssertFalse(package.isBranchName)
         XCTAssertFalse(package.shouldUpdateByVersion)
 
         package.version = "665ee2a"
-        XCTAssertFalse(package.isSemanticVersion)
+        XCTAssertFalse(package.isVersion)
         XCTAssertTrue(package.isCommitHash)
         XCTAssertFalse(package.isBranchName)
         XCTAssertFalse(package.shouldUpdateByVersion)

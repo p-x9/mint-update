@@ -115,9 +115,9 @@ extension Mint {
             .map {
                 String(
                     $0.split(separator: "\t")
-                    .last!
-                    .split(separator: "/")
-                    .last!
+                        .last!
+                        .split(separator: "/")
+                        .last!
                 )
             }
 
@@ -201,11 +201,14 @@ extension PackageReference {
         version.range(of: "^[0-9a-fA-F]{7,40}$", options: .regularExpression) != nil
     }
 
-    public var isSemanticVersion: Bool {
-        version.normalizedVersion != nil
+    public var isVersion: Bool {
+        // Accept `MAJOR.MINOR`, `MAJOR.MINOR.PATCH`, and wildcard minor constraints like `MAJOR.MINOR.*`.
+        // (We still exclude branch names and commit hashes elsewhere.)
+        let pattern = #"^(?:v)?\d+\.\d+(?:\.\d+)?(?:\.(?:\*|x|X))?(?:[A-Za-z0-9.+-]*)$"#
+        return version.range(of: pattern, options: .regularExpression) != nil
     }
 
     public var shouldUpdateByVersion: Bool {
-        !version.isEmpty && !isBranchName && !isCommitHash && isSemanticVersion
+        !version.isEmpty && !isBranchName && !isCommitHash && isVersion
     }
 }

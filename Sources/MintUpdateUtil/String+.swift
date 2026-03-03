@@ -1,15 +1,15 @@
 //
 //  String+.swift
-//  
+//
 //
 //  Created by p-x9 on 2024/09/18
-//  
+//
 //
 
 import Foundation
 
 extension String {
-    static let versionPattern = #"^\d+\.\d+\.\d+[A-Za-z0-9.+-]*$"#
+    static let versionPattern = #"^\d+\.\d+(?:\.\d+)?[A-Za-z0-9.+-]*$"#
     static var versionRegex: NSRegularExpression {
         try! .init(pattern: versionPattern)
     }
@@ -22,12 +22,16 @@ extension String {
     package var normalizedVersion: String? {
         var string = self
         if string.starts(with: "v") { string.removeFirst() }
+
+        // Accept both `MAJOR.MINOR` and `MAJOR.MINOR.PATCH`.
+        // If PATCH is omitted, normalize to `.0` so numeric compare works.
         let range = NSRange(string.startIndex ..< string.endIndex, in: string)
-        if Self.versionRegex
-            .firstMatch(in: string, options: [], range: range) != nil {
-            return string
+        guard Self.versionRegex
+            .firstMatch(in: string, options: [], range: range) != nil else {
+            return nil
         }
-        return nil
+
+        return string
     }
 }
 
