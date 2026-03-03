@@ -47,7 +47,6 @@ class MintUpdateTests: XCTestCase {
         for v in versions {
             XCTAssertEqual(v.key.normalizedVersion, v.value)
         }
-
     }
 
     func testPrereleaseCheck() {
@@ -78,6 +77,25 @@ class MintUpdateTests: XCTestCase {
         for v in notPrereleaseVersions {
             XCTAssertFalse(v.isPrerelease, "\(v)")
         }
+    }
+
+    func testCommitHashExtraction() {
+        let package: PackageReference = .init(
+            repo: "",
+            version: ""
+        )
+
+        package.version = "665ee2a82effcf996ec8f739999c08dd73a4ab81"
+        XCTAssertFalse(package.isSemanticVersion)
+        XCTAssertTrue(package.isCommitHash)
+        XCTAssertFalse(package.isBranchName)
+        XCTAssertFalse(package.shouldUpdateByVersion)
+
+        package.version = "665ee2a"
+        XCTAssertFalse(package.isSemanticVersion)
+        XCTAssertTrue(package.isCommitHash)
+        XCTAssertFalse(package.isBranchName)
+        XCTAssertFalse(package.shouldUpdateByVersion)
     }
 
     func testFindVersion() throws {
