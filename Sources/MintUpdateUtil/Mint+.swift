@@ -3,7 +3,7 @@
 //
 //
 //  Created by p-x9 on 2024/09/18
-//  
+//
 //
 
 import MintKit
@@ -72,8 +72,9 @@ extension Mint {
         in mintfile: Mintfile,
         usePrerelease: Bool
     ) -> MintfileReplacement? {
-        guard !["master", "develop", "main"].contains(package.version),
-              !package.version.isEmpty else {
+        // Skip branch names, empty versions, and commit hashes
+        guard !package.version.isEmpty,
+              package.shouldUpdateByVersion else {
             return nil
         }
         guard let latest = try? findLatestVersion(for: package, usePrerelease: usePrerelease),
@@ -188,5 +189,23 @@ extension Mint {
         }
 
         return result
+    }
+}
+
+extension PackageReference {
+    public var isBranchName: Bool {
+        ["master", "develop", "main"].contains(version)
+    }
+
+    public var isCommitHash: Bool {
+        version.range(of: "^[0-9a-fA-F]{7,40}$", options: .regularExpression) != nil
+    }
+
+    public var isSemanticVersion: Bool {
+        version.normalizedVersion != nil
+    }
+
+    public var shouldUpdateByVersion: Bool {
+        !version.isEmpty && !isBranchName && !isCommitHash && isSemanticVersion
     }
 }
